@@ -15,7 +15,7 @@ type Db struct {
 
 func ConnectDb(Dsn string) *gorm.DB {
 	slog.Info("connecting to database")
-	db, err := gorm.Open(postgres.Open(Dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(Dsn), &gorm.Config{TranslateError: true})
 	if err != nil {
 		slog.Error("failed to connect to database, trying to create it from default db")
 		// trying to create necessary db

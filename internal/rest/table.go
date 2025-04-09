@@ -1,24 +1,25 @@
-package table
+package rest
 
 import (
-	"biliard_club/internal/table"
-	"biliard_club/pkg/middleware"
+	"biliard_club/domain"
+	"biliard_club/internal/rest/middleware"
+	"biliard_club/internal/service/table"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
 )
 
-type HandlerDeps struct {
-	Service *table.Service
+type TableHandlerDeps struct {
+	TableService *table.Service
 }
 
-type Handler struct {
-	*table.Service
+type TableHandler struct {
+	TableService *table.Service
 }
 
-func NewHandler(engine *gin.Engine, deps HandlerDeps) {
-	handler := &Handler{deps.Service}
+func NewTableHandler(engine *gin.Engine, deps TableHandlerDeps) {
+	handler := &TableHandler{deps.TableService}
 
 	protected := engine.Group("/table")
 	protected.Use(middleware.AuthMiddleware())
@@ -31,14 +32,11 @@ func NewHandler(engine *gin.Engine, deps HandlerDeps) {
 	}
 }
 
-func (h *Handler) GetAll(c *gin.Context) {
+func (h *TableHandler) GetAll(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		tables, err := h.Service.GetAllTables()
-		if err != nil && errors.Is(err, table.NoTables) {
-			c.JSON(http.StatusNoContent, gin.H{"error": table.NoTables})
-			return
-		} else if err != nil {
+		tables, err := h.TableService.GetAllTables()
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, nil)
 			return
 		}
@@ -46,8 +44,8 @@ func (h *Handler) GetAll(c *gin.Context) {
 		return
 	}
 	if id, err := strconv.Atoi(id); err == nil {
-		t, err := h.Service.GetByID(uint(id))
-		if errors.Is(err, table.NotFound) {
+		t, err := h.TableService.GetByID(uint(id))
+		if errors.Is(err, domain.ErrTableNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		} else if err != nil {
@@ -60,8 +58,8 @@ func (h *Handler) GetAll(c *gin.Context) {
 	}
 }
 
-func (h *Handler) Create(c *gin.Context) {
-	var t table.Table
+func (h *TableHandler) Create(c *gin.Context) {
+	var t domain.Table
 	if err := c.BindJSON(&t); err != nil {
 		c.JSON(http.StatusBadRequest, nil)
 		return
@@ -70,7 +68,7 @@ func (h *Handler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
-	_, err := h.Service.Create(&t)
+	_, err := h.TableService.Create(&t)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, nil)
 		return
@@ -78,8 +76,8 @@ func (h *Handler) Create(c *gin.Context) {
 	c.JSON(http.StatusOK, nil)
 }
 
-func (h *Handler) Update(c *gin.Context) {
-	var t table.Table
+func (h *TableHandler) Update(c *gin.Context) {
+	var t domain.Table
 	if err := c.BindJSON(&t); err != nil {
 		c.JSON(http.StatusBadRequest, nil)
 		return
@@ -88,7 +86,7 @@ func (h *Handler) Update(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
-	err := h.Service.Update(&t)
+	err := h.TableService.Update(&t)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, nil)
 		return

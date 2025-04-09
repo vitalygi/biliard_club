@@ -1,8 +1,6 @@
-package game
+package domain
 
 import (
-	"biliard_club/internal/table"
-	"biliard_club/internal/user"
 	"gorm.io/gorm"
 	"time"
 )
@@ -10,9 +8,9 @@ import (
 type Game struct {
 	gorm.Model
 	TableID   uint
-	Table     table.Table `json:"table" gorm:"foreignKey:TableID"`
+	Table     Table `json:"table" gorm:"foreignKey:TableID"`
 	UserID    uint
-	User      user.User `json:"user" gorm:"foreignKey:UserID"`
+	User      User      `json:"user" gorm:"foreignKey:UserID"`
 	StartTime time.Time `json:"startTime"`
 	EndTime   time.Time `json:"endTime"`
 	Status    string    `json:"status"`

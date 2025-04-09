@@ -1,26 +1,43 @@
-package http
+package rest
 
 import (
 	"biliard_club/config"
-	"biliard_club/internal/auth"
+	"biliard_club/internal/service/auth"
 	"biliard_club/pkg/jwt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
-type HandlerDeps struct {
-	*config.JWTConfig
-	*auth.Service
+type LoginRequest struct {
+	Phone    string `json:"phone" validate:"required"`
+	Password string `json:"password" validate:"required"`
 }
-type Handler struct {
-	*config.JWTConfig
-	*auth.Service
+type LoginResponse struct {
+	Token string `json:"token"`
 }
 
-func NewAuthHandler(engine *gin.Engine, deps HandlerDeps) {
-	handler := Handler{
-		Service:   deps.Service,
-		JWTConfig: deps.JWTConfig,
+type RegisterRequest struct {
+	Phone    string `json:"phone" validate:"required"`
+	Password string `json:"password" validate:"required"`
+	Name     string `json:"name" validate:"required"`
+}
+type RegisterResponse struct {
+	Token string `json:"token"`
+}
+
+type AuthHandlerDeps struct {
+	*config.JWTConfig
+	*auth.Service
+}
+type AuthHandler struct {
+	*config.JWTConfig
+	AuthService *auth.Service
+}
+
+func NewAuthHandler(engine *gin.Engine, deps AuthHandlerDeps) {
+	handler := AuthHandler{
+		AuthService: deps.Service,
+		JWTConfig:   deps.JWTConfig,
 	}
 	engine.POST(
 		"/auth/login",
@@ -32,12 +49,12 @@ func NewAuthHandler(engine *gin.Engine, deps HandlerDeps) {
 	)
 }
 
-func (h *Handler) Login(c *gin.Context) {
-	var loginReq auth.LoginRequest
+func (h *AuthHandler) Login(c *gin.Context) {
+	var loginReq LoginRequest
 	if err := c.BindJSON(&loginReq); err != nil {
 		return
 	}
-	user, err := h.Service.Login(loginReq.Phone, loginReq.Password)
+	user, err := h.AuthService.Login(loginReq.Phone, loginReq.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -53,14 +70,14 @@ func (h *Handler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, nil)
 }
 
-func (h *Handler) Register(c *gin.Context) {
-	var registerReq auth.RegisterRequest
+func (h *AuthHandler) Register(c *gin.Context) {
+	var registerReq RegisterRequest
 	if err := c.BindJSON(&registerReq); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
 
-	user, err := h.Service.Register(registerReq.Phone, registerReq.Password, registerReq.Name)
+	user, err := h.AuthService.Register(registerReq.Phone, registerReq.Password, registerReq.Name)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
