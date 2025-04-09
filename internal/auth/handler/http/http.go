@@ -1,7 +1,8 @@
-package auth
+package http
 
 import (
 	"biliard_club/config"
+	"biliard_club/internal/auth"
 	"biliard_club/pkg/jwt"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -9,11 +10,11 @@ import (
 
 type HandlerDeps struct {
 	*config.JWTConfig
-	*Service
+	*auth.Service
 }
 type Handler struct {
 	*config.JWTConfig
-	*Service
+	*auth.Service
 }
 
 func NewAuthHandler(engine *gin.Engine, deps HandlerDeps) {
@@ -32,7 +33,7 @@ func NewAuthHandler(engine *gin.Engine, deps HandlerDeps) {
 }
 
 func (h *Handler) Login(c *gin.Context) {
-	var loginReq LoginRequest
+	var loginReq auth.LoginRequest
 	if err := c.BindJSON(&loginReq); err != nil {
 		return
 	}
@@ -53,7 +54,7 @@ func (h *Handler) Login(c *gin.Context) {
 }
 
 func (h *Handler) Register(c *gin.Context) {
-	var registerReq RegisterRequest
+	var registerReq auth.RegisterRequest
 	if err := c.BindJSON(&registerReq); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return

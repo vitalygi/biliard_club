@@ -3,7 +3,11 @@ package main
 import (
 	"biliard_club/config"
 	"biliard_club/internal/auth"
+	http3 "biliard_club/internal/auth/handler/http"
+	"biliard_club/internal/table"
+	httphandler "biliard_club/internal/table/handler/http"
 	"biliard_club/internal/user"
+	http2 "biliard_club/internal/user/handler/http"
 	"biliard_club/pkg/db"
 	"biliard_club/pkg/middleware"
 	"github.com/gin-gonic/gin"
@@ -22,15 +26,19 @@ func main() {
 	conf := config.LoadConfig()
 	database := db.NewDb(&conf.Db)
 	userRepo := user.NewRepository(database)
+	tableRepo := table.NewRepository(database)
 
 	userService := user.NewService(userRepo)
 	authService := auth.NewAuthService(userRepo)
+	tableService := table.NewService(tableRepo)
+
 	router := gin.Default()
 
 	router.Use(middleware.CORS())
 
-	user.NewHandler(router, user.HandlerDeps{Service: userService})
-	auth.NewAuthHandler(router, auth.HandlerDeps{
+	httphandler.NewHandler(router, httphandler.HandlerDeps{Service: tableService})
+	http2.NewHandler(router, http2.HandlerDeps{Service: userService})
+	http3.NewAuthHandler(router, http3.HandlerDeps{
 		JWTConfig: &conf.JWT,
 		Service:   authService,
 	})

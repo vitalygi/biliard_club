@@ -1,7 +1,6 @@
 package table
 
 import (
-	"biliard_club/internal/user"
 	"gorm.io/gorm"
 )
 
@@ -12,6 +11,4 @@ type Table struct {
 	PriceAfterSwitch  float32 `json:"priceAfterSwitch"`
 	SwitchTime        int     `json:"switchTime"`
 	SwitchLong        int     `json:"switchLong"`
-	UserID            uint
-	User              user.User `json:"user" gorm:"foreignKey:UserID"`
 }

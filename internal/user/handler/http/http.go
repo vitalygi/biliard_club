@@ -1,16 +1,17 @@
-package user
+package http
 
 import (
+	"biliard_club/internal/user"
 	"biliard_club/pkg/middleware"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
 type HandlerDeps struct {
-	Service *Service
+	Service *user.Service
 }
 type Handler struct {
-	*Service
+	*user.Service
 }
 
 func NewHandler(engine *gin.Engine, deps HandlerDeps) {
@@ -25,7 +26,7 @@ func NewHandler(engine *gin.Engine, deps HandlerDeps) {
 }
 
 func (h *Handler) CreateUser(c *gin.Context) {
-	var user User
+	var user user.User
 	if err := c.BindJSON(&user); err == nil {
 		if _, err = h.Create(&user); err != nil {
 			c.JSON(http.StatusInternalServerError, nil)
