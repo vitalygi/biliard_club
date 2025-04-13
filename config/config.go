@@ -7,10 +7,14 @@ import (
 )
 
 type Config struct {
-	Db  DbConfig
-	JWT JWTConfig
+	Db     DbConfig
+	JWT    JWTConfig
+	Server ServerConfig
 }
 
+type ServerConfig struct {
+	Port string
+}
 type JWTConfig struct {
 	Secret string
 }
@@ -29,6 +33,9 @@ func LoadConfig() *Config {
 		},
 		JWT: JWTConfig{
 			Secret: os.Getenv("JWT_SECRET"),
+		},
+		Server: ServerConfig{
+			Port: os.Getenv("SERVER_PORT"),
 		},
 	}
 }

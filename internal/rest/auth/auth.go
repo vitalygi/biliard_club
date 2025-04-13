@@ -1,42 +1,28 @@
-package rest
+package auth
 
 import (
 	"biliard_club/config"
-	"biliard_club/internal/service/auth"
+	"biliard_club/domain"
 	"biliard_club/pkg/jwt"
+	"biliard_club/pkg/validation"
+	"errors"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"net/http"
 )
 
-type LoginRequest struct {
-	Phone    string `json:"phone" validate:"required"`
-	Password string `json:"password" validate:"required"`
-}
-type LoginResponse struct {
-	Token string `json:"token"`
-}
-
-type RegisterRequest struct {
-	Phone    string `json:"phone" validate:"required"`
-	Password string `json:"password" validate:"required"`
-	Name     string `json:"name" validate:"required"`
-}
-type RegisterResponse struct {
-	Token string `json:"token"`
-}
-
 type AuthHandlerDeps struct {
 	*config.JWTConfig
-	*auth.Service
+	domain.AuthService
 }
 type AuthHandler struct {
 	*config.JWTConfig
-	AuthService *auth.Service
+	AuthService domain.AuthService
 }
 
 func NewAuthHandler(engine *gin.Engine, deps AuthHandlerDeps) {
 	handler := AuthHandler{
-		AuthService: deps.Service,
+		AuthService: deps.AuthService,
 		JWTConfig:   deps.JWTConfig,
 	}
 	engine.POST(
@@ -51,12 +37,25 @@ func NewAuthHandler(engine *gin.Engine, deps AuthHandlerDeps) {
 
 func (h *AuthHandler) Login(c *gin.Context) {
 	var loginReq LoginRequest
+
 	if err := c.BindJSON(&loginReq); err != nil {
+		var validationErrors validator.ValidationErrors
+		if errors.As(err, &validationErrors) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": validation.As(validationErrors).Error()})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "data should be a valid json"})
+		}
 		return
 	}
+
 	user, err := h.AuthService.Login(loginReq.Phone, loginReq.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		var domainErr *domain.Error
+		if errors.As(err, &domainErr) {
+			c.JSON(domainErr.Code, gin.H{"error": domainErr.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, nil)
 		return
 	}
 	token, err := jwt.NewJWT(h.JWTConfig.Secret).Create(jwt.Data{Phone: user.Phone})
@@ -71,15 +70,27 @@ func (h *AuthHandler) Login(c *gin.Context) {
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
+
 	var registerReq RegisterRequest
+
 	if err := c.BindJSON(&registerReq); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		var validationErrors validator.ValidationErrors
+		if errors.As(err, &validationErrors) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": validation.As(validationErrors).Error()})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "data should be a valid json"})
+		}
 		return
 	}
 
 	user, err := h.AuthService.Register(registerReq.Phone, registerReq.Password, registerReq.Name)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		var domainErr *domain.Error
+		if errors.As(err, &domainErr) {
+			c.JSON(domainErr.Code, gin.H{"error": domainErr.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, nil)
 		return
 	}
 

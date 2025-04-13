@@ -2,8 +2,8 @@ package rest
 
 import (
 	"biliard_club/domain"
+	"biliard_club/domain/models"
 	"biliard_club/internal/rest/middleware"
-	"biliard_club/internal/service/table"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -11,11 +11,11 @@ import (
 )
 
 type TableHandlerDeps struct {
-	TableService *table.Service
+	TableService domain.TableService
 }
 
 type TableHandler struct {
-	TableService *table.Service
+	TableService domain.TableService
 }
 
 func NewTableHandler(engine *gin.Engine, deps TableHandlerDeps) {
@@ -45,8 +45,9 @@ func (h *TableHandler) GetAll(c *gin.Context) {
 	}
 	if id, err := strconv.Atoi(id); err == nil {
 		t, err := h.TableService.GetByID(uint(id))
-		if errors.Is(err, domain.ErrTableNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		var domainErr *domain.Error
+		if errors.As(err, &domainErr) {
+			c.JSON(domainErr.Code, gin.H{"error": err.Error()})
 			return
 		} else if err != nil {
 			c.JSON(http.StatusInternalServerError, nil)
@@ -59,7 +60,7 @@ func (h *TableHandler) GetAll(c *gin.Context) {
 }
 
 func (h *TableHandler) Create(c *gin.Context) {
-	var t domain.Table
+	var t models.Table
 	if err := c.BindJSON(&t); err != nil {
 		c.JSON(http.StatusBadRequest, nil)
 		return
@@ -70,6 +71,11 @@ func (h *TableHandler) Create(c *gin.Context) {
 	}
 	_, err := h.TableService.Create(&t)
 	if err != nil {
+		var domainErr *domain.Error
+		if errors.As(err, &domainErr) {
+			c.JSON(domainErr.Code, gin.H{"error": domainErr.Error()})
+			return
+		}
 		c.JSON(http.StatusBadRequest, nil)
 		return
 	}
@@ -77,7 +83,7 @@ func (h *TableHandler) Create(c *gin.Context) {
 }
 
 func (h *TableHandler) Update(c *gin.Context) {
-	var t domain.Table
+	var t models.Table
 	if err := c.BindJSON(&t); err != nil {
 		c.JSON(http.StatusBadRequest, nil)
 		return
@@ -88,6 +94,11 @@ func (h *TableHandler) Update(c *gin.Context) {
 	}
 	err := h.TableService.Update(&t)
 	if err != nil {
+		var domainErr *domain.Error
+		if errors.As(err, &domainErr) {
+			c.JSON(domainErr.Code, gin.H{"error": domainErr.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, nil)
 		return
 	}

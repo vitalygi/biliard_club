@@ -2,17 +2,20 @@ package rest
 
 import (
 	"biliard_club/domain"
+	"biliard_club/domain/models"
 	"biliard_club/internal/rest/middleware"
-	"biliard_club/internal/service/user"
+	"biliard_club/pkg/validation"
+	"errors"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"net/http"
 )
 
 type UserHandlerDeps struct {
-	UserService *user.Service
+	UserService domain.UserService
 }
 type UserHandler struct {
-	UserService *user.Service
+	UserService domain.UserService
 }
 
 func NewUserHandler(engine *gin.Engine, deps UserHandlerDeps) {
@@ -27,12 +30,24 @@ func NewUserHandler(engine *gin.Engine, deps UserHandlerDeps) {
 }
 
 func (h *UserHandler) CreateUser(c *gin.Context) {
-	var u domain.User
-	if err := c.BindJSON(&u); err == nil {
-		if _, err = h.UserService.Create(&u); err != nil {
-			c.JSON(http.StatusInternalServerError, nil)
+	var u models.User
+
+	if err := c.BindJSON(&u); err != nil {
+		var validationErrors validator.ValidationErrors
+		if errors.As(err, &validationErrors) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": validation.As(validationErrors).Error()})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "data should be a valid json"})
 		}
-	} else {
-		c.JSON(http.StatusBadRequest, nil)
+		return
+	}
+	if _, err := h.UserService.Create(&u); err != nil {
+		var domainErr *domain.Error
+		if errors.As(err, &domainErr) {
+			c.JSON(domainErr.Code, gin.H{"error": domainErr.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, nil)
+		return
 	}
 }

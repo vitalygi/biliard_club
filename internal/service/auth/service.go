@@ -2,29 +2,22 @@ package auth
 
 import (
 	"biliard_club/domain"
+	"biliard_club/domain/models"
 	"errors"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserRepository interface {
-	GetByPhone(phone string) (*domain.User, error)
-	Create(user *domain.User) (*domain.User, error)
-}
-
 type Service struct {
-	UserRepository UserRepository
+	UserRepository domain.UserRepository
 }
 
-func NewAuthService(userRepository UserRepository) *Service {
+func NewAuthService(userRepository domain.UserRepository) *Service {
 	return &Service{
 		UserRepository: userRepository,
 	}
 }
 
-func (service *Service) Register(phone, password, name string) (*domain.User, error) {
-	if phone == "" || password == "" || name == "" {
-		return nil, errors.New("phone, password, and name are required")
-	}
+func (service *Service) Register(phone, password, name string) (*models.User, error) {
 	if len(password) < 8 {
 		return nil, errors.New("password must be at least 8 characters long")
 	}
@@ -32,29 +25,29 @@ func (service *Service) Register(phone, password, name string) (*domain.User, er
 	if err != nil {
 		return nil, err
 	}
-	userEntity := &domain.User{
+	userEntity := &models.User{
 		Phone:    phone,
 		Password: string(hashedPassword),
 		Name:     name,
 	}
-	userEntity, err = service.UserRepository.Create(userEntity)
-	if err != nil {
-		return nil, err
+	u, err := service.UserRepository.Create(userEntity)
+	if err != nil && !errors.Is(err, domain.ErrConflict) {
+		return nil, domain.ErrInternalServer
 	}
-	return userEntity, nil
+	return u, err
 }
 
-func (service *Service) Login(phone, password string) (*domain.User, error) {
+func (service *Service) Login(phone, password string) (*models.User, error) {
 	existedUser, err := service.UserRepository.GetByPhone(phone)
 	if err != nil {
-		if errors.Is(err, domain.ErrUserNotFound) {
-			return nil, domain.ErrWrongCredentials
+		if errors.Is(err, domain.ErrNotFound) {
+			return nil, domain.ErrUnauthorized
 		}
 		return nil, err
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(existedUser.Password), []byte(password))
 	if err != nil {
-		return nil, domain.ErrWrongCredentials
+		return nil, domain.ErrUnauthorized
 	}
 	return existedUser, nil
 }
